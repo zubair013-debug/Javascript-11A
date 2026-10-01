@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mini Library & Praktikum DOM</title>
+
+    <style>
+      /* Tampilan dasar halaman */
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        background-color: #eef4f8;
+        color: #333;
+        max-width: 900px;
+        margin: 0 auto;
+      }
+
+      h1, h2, h3 {
+        color: #3f759b;
+      }
+
+      /* Kartu dan Kontainer */
+      .card {
+        background-color: white;
+        padding: 20px;
+        margin: 15px 0;
+        border-radius: 10px;
+        border: 1px solid #ccc;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+      }
+
+      /* Informasi jumlah buku */
+      #jumlah-buku {
+        color: #666;
+        font-weight: bold;
+        margin-bottom: 15px;
+      }
+
+      /* Kartu setiap buku */
+      .buku-card {
+        background-color: #f9f9f9;
+        padding: 15px;
+        margin: 12px 0;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        transition: transform 0.2s, background-color 0.2s;
+      }
+
+      .nama-buku {
+        margin-top: 0;
+        color: #447ba3;
+      }
+
+      /* Grup Tombol Aksi Buku */
+      .tombol-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      /* Tombol */
+      button, .tombol-pinjam, .tombol-kembali {
+        padding: 8px 14px;
+        border: none;
+        border-radius: 6px;
+        background-color: #5c9cca;
+        color: white;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      button:hover, .tombol-pinjam:hover {
+        background-color: #488ab9;
+      }
+
+      /* Tombol Kembalikan Buku */
+      .tombol-kembali {
+        background-color: #27ae60;
+      }
+
+      .tombol-kembali:hover {
+        background-color: #219150;
+      }
+
+      button:disabled {
+        background-color: #888;
+        color: white;
+        cursor: not-allowed;
+      }
+
+      .delete-btn {
+        background-color: #e05555;
+        margin-left: 10px;
+        padding: 4px 8px;
+        font-size: 12px;
+      }
+
+      .delete-btn:hover {
+        background-color: #c0392b;
+      }
+
+      /* Status Dipinjam */
+      .sedang-dipinjam {
+        background-color: #ffe1e1 !important;
+        border: 2px solid #e05555;
+      }
+
+      /* Form & Input */
+      .form-group, .input-group {
+        margin-bottom: 15px;
+      }
+
+      input[type="text"] {
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        width: 60%;
+        max-width: 300px;
+      }
+
+      .preview-text {
+        font-style: italic;
+        color: #555;
+      }
+
+      /* Event Bubbling Demo */
+      .box-parent {
+        padding: 20px;
+        background-color: #d1ecf1;
+        border: 2px dashed #17a2b8;
+        border-radius: 8px;
+        margin-bottom: 10px;
+      }
+
+      .log-text {
+        font-weight: bold;
+        color: #856404;
+        background-color: #fff3cd;
+        padding: 10px;
+        border-radius: 4px;
+      }
+
+      /* Cover Buku */
+      .cover-container {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .cover-img {
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        width: 120px;
+        height: 160px;
+        object-fit: cover;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Section 1: Mini Library -->
+    <section class="card">
+      <h1 id="nama-perpus">⭐ Mini Library</h1>
+      <p id="jumlah-buku">Jumlah Buku: 0</p>
+
+      <div id="koleksi-buku"></div>
+
+      <h3>Cover Buku Aktif:</h3>
+      <div class="cover-container">
+        <img id="gambar-cover" class="cover-img" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTCvOLuVLosgB7spl5QtzBX87pf7lF8jUyc2jkzm1fofQ&s=10" alt="Dilan 1990" />
+      </div>
+    </section>
+
+    <!-- Section 2: Form & Input Real-time -->
+    <section class="card">
+      <h2>1. Form & Real-time Input</h2>
+      <form id="userForm">
+        <div class="form-group">
+          <label for="username">Nama Pengguna:</label>
+          <input type="text" id="username" placeholder="Ketik nama Anda..." autocomplete="off" />
+          <p class="preview-text">Preview: <span id="namePreview">-</span></p>
+        </div>
+        <button type="submit" id="submitBtn">Kirim Data</button>
+      </form>
+    </section>
+
+    <!-- Section 3: Tambah & Hapus Item -->
+    <section class="card">
+      <h2>2. Tambah Buku/Item Baru</h2>
+      <div class="input-group">
+        <input type="text" id="itemInput" placeholder="Judul buku baru..." />
+        <button id="addBtn">Tambah Item</button>
+      </div>
+      <ul id="itemList">
+        <!-- Item akan ditambahkan secara dinamis oleh JS -->
+      </ul>
+    </section>
+
+    <!-- Section 4: Event Bubbling & stopPropagation -->
+    <section class="card">
+      <h2>3. Event Bubbling & StopPropagation</h2>
+      <div id="parentBox" class="box-parent">
+        <p>Ini Kotak Induk (Parent)</p>
+        <button id="normalBtn">Tombol Bubbling Normal</button>
+        <button id="stoppedBtn">Tombol Dengan stopPropagation()</button>
+      </div>
+      <p id="logBox" class="log-text">Klik salah satu tombol di atas...</p>
+    </section>
+
+    <script src="/js/lanjutan,.js"></script>
+  </body>
+</html>

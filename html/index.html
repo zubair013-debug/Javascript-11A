@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Perpus Mini - Contoh DOM</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: system-ui, sans-serif;
+        background: #f1f5f9;
+        color: #1e293b;
+        padding: 24px;
+      }
+      .wrap {
+        max-width: 560px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 22px;
+        margin-bottom: 4px;
+      }
+      #status {
+        color: #64748b;
+        font-size: 13px;
+        margin-bottom: 16px;
+      }
+      form,
+      .cari {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      input {
+        flex: 1;
+        padding: 8px 10px;
+        border: 1.5px solid #cbd5e1;
+        border-radius: 8px;
+      }
+      button {
+        padding: 7px 12px;
+        border: 1.5px solid #93c5fd;
+        border-radius: 8px;
+        background: #fff;
+        color: #2563eb;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      #pesan {
+        font-size: 13px;
+        min-height: 18px;
+        margin-bottom: 8px;
+      }
+      ul {
+        list-style: none;
+        display: grid;
+        gap: 8px;
+      }
+      li {
+        background: #fff;
+        border-radius: 10px;
+        padding: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-left: 4px solid #2563eb;
+        cursor: pointer;
+      }
+      li.dipilih {
+        box-shadow: 0 0 0 3px #2563eb;
+      } /* classList.toggle */
+      li.habis {
+        border-left-color: #cbd5e1;
+        opacity: 0.7;
+      } /* classList.add */
+      .info {
+        flex: 1;
+        font-size: 14px;
+      }
+      .info small {
+        display: block;
+        color: #64748b;
+      }
+      .kosong {
+        text-align: center;
+        color: #94a3b8;
+        padding: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>📚 Perpus Mini</h1>
+      <p id="status">0 buku</p>
+
+      <!-- 5. event submit -->
+      <form id="form-buku">
+        <input id="input-judul" placeholder="Judul buku" />
+        <input
+          id="input-stok"
+          type="number"
+          min="0"
+          value="1"
+          style="max-width: 70px"
+        />
+        <button type="submit">Tambah</button>
+      </form>
+      <p id="pesan"></p>
+
+      <!-- 5. event input -->
+      <div class="cari">
+        <input id="input-cari" placeholder="Cari judul..." />
+      </div>
+
+      <ul id="daftar-buku"></ul>
+    </div>
+
+    <script>
+      /* ==========================================================
+   CATATAN SINGKAT (tanda [1]-[6] mengikuti poin di README)
+   [1] querySelector     -> ambil 1 elemen pertama (null jika tidak ada)
+       querySelectorAll  -> ambil semua elemen (NodeList, pakai forEach)
+   [2] textContent -> isi sebagai teks biasa (aman untuk input pengguna)
+       innerHTML   -> isi sebagai HTML (hanya untuk HTML buatan sendiri)
+       innerText   -> hanya teks yang terlihat (elemen display:none tidak ikut)
+   [3] getAttribute / setAttribute / removeAttribute -> baca / ubah / hapus atribut
+       style -> ubah CSS langsung | classList -> add / remove / toggle class
+   [4] createElement -> buat elemen | append / prepend -> taruh di akhir / awal
+       remove -> hapus elemen dari halaman
+   [5] click -> diklik | input -> nilai berubah saat mengetik
+       submit -> form dikirim (preventDefault = cegah reload)
+   [6] Bubbling -> event naik dari anak ke parent
+       stopPropagation -> hentikan naiknya event
+       Delegation -> 1 listener di parent untuk banyak anak
+   ========================================================== */
+
+      // [1] Pilih elemen: querySelector -> 1 elemen berdasarkan selector CSS
+      const form = document.querySelector("#form-buku");
+      const inputJudul = document.querySelector("#input-judul");
+      const inputStok = document.querySelector("#input-stok");
+      const inputCari = document.querySelector("#input-cari");
+      const pesan = document.querySelector("#pesan");
+      const elStatus = document.querySelector("#status");
+      const daftar = document.querySelector("#daftar-buku");
+
+      // [4] Buat elemen baru dengan createElement (belum tampil sebelum dimasukkan ke DOM)
+      function buatItem(judul, stok) {
+        const li = document.createElement("li");
+        li.dataset.stok = stok; // simpan stok di atribut data-stok
+
+        const info = document.createElement("div");
+        info.className = "info";
+        const nama = document.createElement("strong");
+        nama.textContent = judul; // [2] textContent: teks biasa, aman
+        const sisa = document.createElement("small");
+        sisa.className = "sisa";
+        info.append(nama, sisa); // [4] append: boleh banyak elemen sekaligus
+
+        const pinjam = document.createElement("button");
+        pinjam.textContent = "Pinjam";
+        pinjam.className = "pinjam";
+        const hapus = document.createElement("button");
+        hapus.textContent = "Hapus";
+        hapus.className = "hapus";
+
+        li.append(info, pinjam, hapus);
+        perbaruiItem(li);
+        return li;
+      }
+
+      // [3] Atribut & class: tampilan item mengikuti nilai stok
+      function perbaruiItem(li) {
+        const stok = Number(li.getAttribute("data-stok")); // baca atribut
+        const pinjam = li.querySelector(".pinjam");
+        li.querySelector(".sisa").textContent =
+          stok > 0 ? `Stok: ${stok}` : "Habis";
+        li.classList.toggle("habis", stok === 0); // true -> tambah class, false -> hapus
+        if (stok === 0)
+          pinjam.setAttribute("disabled", "true"); // matikan tombol
+        else pinjam.removeAttribute("disabled"); // aktifkan lagi
+      }
+
+      function perbaruiStatus() {
+        // [1] querySelectorAll -> semua <li> buku (kecuali pesan kosong)
+        const total = daftar.querySelectorAll("li:not(.kosong)").length;
+        elStatus.textContent = `${total} buku`;
+        if (total === 0) {
+          // [2] innerHTML: HTML buatan sendiri, bukan dari input pengguna
+          daftar.innerHTML = `<li class="kosong"><em>Belum ada buku.</em></li>`;
+        }
+      }
+
+      function tampilkanPesan(teks, warna) {
+        pesan.textContent = teks;
+        pesan.style.color = warna; // [3] style langsung (camelCase untuk properti CSS)
+      }
+
+      // [5] submit: dijalankan saat form dikirim
+      form.addEventListener("submit", (event) => {
+        event.preventDefault(); // cegah halaman reload
+        const judul = inputJudul.value.trim();
+        if (judul === "")
+          return tampilkanPesan("Judul wajib diisi.", "#dc2626");
+
+        daftar.querySelector(".kosong")?.remove(); // [4] remove: hapus pesan kosong
+        daftar.prepend(buatItem(judul, Number(inputStok.value))); // [4] prepend: taruh paling atas
+        perbaruiStatus();
+        tampilkanPesan(`"${judul}" berhasil ditambahkan.`, "#16a34a");
+        form.reset();
+      });
+
+      // [5] input: dijalankan setiap huruf diketik -> pencarian langsung
+      inputCari.addEventListener("input", () => {
+        const kata = inputCari.value.toLowerCase();
+        // [1] querySelectorAll + forEach: periksa tiap buku
+        daftar.querySelectorAll("li:not(.kosong)").forEach((li) => {
+          const cocok = li
+            .querySelector("strong")
+            .textContent.toLowerCase()
+            .includes(kata);
+          li.style.display = cocok ? "" : "none"; // [3] sembunyikan yang tidak cocok
+        });
+      });
+
+      // [6] Event delegation: 1 listener di <ul> untuk semua item,
+      //     termasuk item yang baru ditambahkan nanti (klik "naik" lewat bubbling).
+      daftar.addEventListener("click", (event) => {
+        // event.target = elemen yang benar-benar diklik; closest("li") = kartu pemiliknya
+        const li = event.target.closest("li");
+        if (!li || li.classList.contains("kosong")) return;
+
+        if (event.target.matches(".pinjam")) {
+          event.stopPropagation(); // [6] hentikan bubbling (di sini: kartu tidak ikut terpilih)
+          li.dataset.stok = Number(li.dataset.stok) - 1;
+          perbaruiItem(li);
+          return;
+        }
+        if (event.target.matches(".hapus")) {
+          li.remove(); // [4] hapus kartu dari halaman
+          perbaruiStatus();
+          return;
+        }
+        li.classList.toggle("dipilih"); // [3] klik bagian lain kartu: pilih / batal pilih
+      });
+
+      // Data awal (reverse() supaya urutan tampil sama, karena prepend menaruh di atas)
+      [
+        ["Laskar Pelangi", 3],
+        ["Bumi Manusia", 0],
+        ["Atomic Habits", 5],
+      ]
+        .reverse()
+        .forEach(([judul, stok]) => daftar.prepend(buatItem(judul, stok)));
+      perbaruiStatus();
+      console.log("[2] innerText status:", elStatus.innerText);
+    </script>
+  </body>
+</html>
