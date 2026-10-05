@@ -76,11 +76,11 @@
       }
       li.dipilih {
         box-shadow: 0 0 0 3px #2563eb;
-      } /* classList.toggle */
+      }
       li.habis {
         border-left-color: #cbd5e1;
         opacity: 0.7;
-      } /* classList.add */
+      }
       .info {
         flex: 1;
         font-size: 14px;
@@ -101,7 +101,7 @@
       <h1>📚 Perpus Mini</h1>
       <p id="status">0 buku</p>
 
-      <!-- 5. event submit -->
+      <!-- 8. Form untuk Ambil Data dan Validasi -->
       <form id="form-buku">
         <input id="input-judul" placeholder="Judul buku" />
         <input
@@ -115,7 +115,7 @@
       </form>
       <p id="pesan"></p>
 
-      <!-- 5. event input -->
+      <!-- Event Input Pencarian -->
       <div class="cari">
         <input id="input-cari" placeholder="Cari judul..." />
       </div>
@@ -125,24 +125,19 @@
 
     <script>
       /* ==========================================================
-   CATATAN SINGKAT (tanda [1]-[6] mengikuti poin di README)
-   [1] querySelector     -> ambil 1 elemen pertama (null jika tidak ada)
-       querySelectorAll  -> ambil semua elemen (NodeList, pakai forEach)
-   [2] textContent -> isi sebagai teks biasa (aman untuk input pengguna)
-       innerHTML   -> isi sebagai HTML (hanya untuk HTML buatan sendiri)
-       innerText   -> hanya teks yang terlihat (elemen display:none tidak ikut)
-   [3] getAttribute / setAttribute / removeAttribute -> baca / ubah / hapus atribut
-       style -> ubah CSS langsung | classList -> add / remove / toggle class
-   [4] createElement -> buat elemen | append / prepend -> taruh di akhir / awal
-       remove -> hapus elemen dari halaman
-   [5] click -> diklik | input -> nilai berubah saat mengetik
-       submit -> form dikirim (preventDefault = cegah reload)
-   [6] Bubbling -> event naik dari anak ke parent
-       stopPropagation -> hentikan naiknya event
-       Delegation -> 1 listener di parent untuk banyak anak
+   CATATAN SINGKAT (tanda [1]-[9] mengikuti poin materi)
+   [1] querySelector / querySelectorAll
+   [2] textContent / innerHTML / innerText
+   [3] getAttribute / setAttribute / style / classList
+   [4] createElement / append / prepend / remove
+   [5] click / input / submit (preventDefault)
+   [6] Bubbling & stopPropagation
+   [7] Event Delegation -> 1 listener di parent untuk semua anak
+   [8] Ambil Data & Validasi -> ambil nilai form & periksa validitasnya
+   [9] DOM Traversal -> Navigasi Parent (closest) & Children (querySelector)
    ========================================================== */
 
-      // [1] Pilih elemen: querySelector -> 1 elemen berdasarkan selector CSS
+      // Select Elemen DOM
       const form = document.querySelector("#form-buku");
       const inputJudul = document.querySelector("#input-judul");
       const inputStok = document.querySelector("#input-stok");
@@ -151,22 +146,26 @@
       const elStatus = document.querySelector("#status");
       const daftar = document.querySelector("#daftar-buku");
 
-      // [4] Buat elemen baru dengan createElement (belum tampil sebelum dimasukkan ke DOM)
+      // Fungsi Pembantu: Membuat Elemen
       function buatItem(judul, stok) {
         const li = document.createElement("li");
-        li.dataset.stok = stok; // simpan stok di atribut data-stok
+        li.dataset.stok = stok;
 
         const info = document.createElement("div");
         info.className = "info";
+
         const nama = document.createElement("strong");
-        nama.textContent = judul; // [2] textContent: teks biasa, aman
+        nama.textContent = judul;
+
         const sisa = document.createElement("small");
         sisa.className = "sisa";
-        info.append(nama, sisa); // [4] append: boleh banyak elemen sekaligus
+
+        info.append(nama, sisa);
 
         const pinjam = document.createElement("button");
         pinjam.textContent = "Pinjam";
         pinjam.className = "pinjam";
+
         const hapus = document.createElement("button");
         hapus.textContent = "Hapus";
         hapus.className = "hapus";
@@ -176,82 +175,109 @@
         return li;
       }
 
-      // [3] Atribut & class: tampilan item mengikuti nilai stok
+      // Fungsi Pembantu: Memperbarui tampilan item berdasarkan stok
       function perbaruiItem(li) {
-        const stok = Number(li.getAttribute("data-stok")); // baca atribut
+        const stok = Number(li.getAttribute("data-stok"));
         const pinjam = li.querySelector(".pinjam");
+        
+        // [9] DOM Traversal Children: Mencari elemen .sisa di dalam li
         li.querySelector(".sisa").textContent =
           stok > 0 ? `Stok: ${stok}` : "Habis";
-        li.classList.toggle("habis", stok === 0); // true -> tambah class, false -> hapus
-        if (stok === 0)
-          pinjam.setAttribute("disabled", "true"); // matikan tombol
-        else pinjam.removeAttribute("disabled"); // aktifkan lagi
+
+        li.classList.toggle("habis", stok === 0);
+
+        if (stok === 0) pinjam.setAttribute("disabled", "true");
+        else pinjam.removeAttribute("disabled");
       }
 
+      // Fungsi Pembantu: Memperbarui status jumlah buku
       function perbaruiStatus() {
-        // [1] querySelectorAll -> semua <li> buku (kecuali pesan kosong)
         const total = daftar.querySelectorAll("li:not(.kosong)").length;
         elStatus.textContent = `${total} buku`;
         if (total === 0) {
-          // [2] innerHTML: HTML buatan sendiri, bukan dari input pengguna
           daftar.innerHTML = `<li class="kosong"><em>Belum ada buku.</em></li>`;
         }
       }
 
       function tampilkanPesan(teks, warna) {
         pesan.textContent = teks;
-        pesan.style.color = warna; // [3] style langsung (camelCase untuk properti CSS)
+        pesan.style.color = warna;
       }
 
-      // [5] submit: dijalankan saat form dikirim
+      // =====================================================
+      // 8. Ambil Data dan Validasi
+      // =====================================================
       form.addEventListener("submit", (event) => {
-        event.preventDefault(); // cegah halaman reload
-        const judul = inputJudul.value.trim();
-        if (judul === "")
-          return tampilkanPesan("Judul wajib diisi.", "#dc2626");
+        event.preventDefault(); // Mencegah reload halaman
 
-        daftar.querySelector(".kosong")?.remove(); // [4] remove: hapus pesan kosong
-        daftar.prepend(buatItem(judul, Number(inputStok.value))); // [4] prepend: taruh paling atas
+        // 1. Ambil Data dari Input
+        const judul = inputJudul.value.trim();
+        const stok = Number(inputStok.value);
+
+        // 2. Validasi Data
+        if (judul === "") {
+          return tampilkanPesan("Judul buku wajib diisi!", "#dc2626");
+        }
+        if (isNaN(stok) || stok < 0) {
+          return tampilkanPesan("Stok tidak valid!", "#dc2626");
+        }
+
+        // Hapus pesan kosong jika ada
+        daftar.querySelector(".kosong")?.remove();
+
+        // Tambah elemen baru ke DOM
+        daftar.prepend(buatItem(judul, stok));
         perbaruiStatus();
+
         tampilkanPesan(`"${judul}" berhasil ditambahkan.`, "#16a34a");
         form.reset();
       });
 
-      // [5] input: dijalankan setiap huruf diketik -> pencarian langsung
+      // Event Input: Pencarian Buku
       inputCari.addEventListener("input", () => {
         const kata = inputCari.value.toLowerCase();
-        // [1] querySelectorAll + forEach: periksa tiap buku
+
         daftar.querySelectorAll("li:not(.kosong)").forEach((li) => {
-          const cocok = li
-            .querySelector("strong")
-            .textContent.toLowerCase()
-            .includes(kata);
-          li.style.display = cocok ? "" : "none"; // [3] sembunyikan yang tidak cocok
+          // [9] DOM Traversal Children: Mencari elemen <strong> di dalam kartu
+          const teksJudul = li.querySelector("strong").textContent.toLowerCase();
+          const cocok = teksJudul.includes(kata);
+          li.style.display = cocok ? "" : "none";
         });
       });
 
-      // [6] Event delegation: 1 listener di <ul> untuk semua item,
-      //     termasuk item yang baru ditambahkan nanti (klik "naik" lewat bubbling).
+      // =====================================================
+      // 7. Event Delegation & 9. DOM Traversal (Parent - Children)
+      // =====================================================
+      // [7] Event Delegation: Listener dipasang pada induk (<ul>)
       daftar.addEventListener("click", (event) => {
-        // event.target = elemen yang benar-benar diklik; closest("li") = kartu pemiliknya
+        // [9] DOM Traversal Parent: Mencari elemen <li> terdekat dari target yang diklik
         const li = event.target.closest("li");
         if (!li || li.classList.contains("kosong")) return;
 
+        // Aksi 1: Tombol Pinjam
         if (event.target.matches(".pinjam")) {
-          event.stopPropagation(); // [6] hentikan bubbling (di sini: kartu tidak ikut terpilih)
-          li.dataset.stok = Number(li.dataset.stok) - 1;
-          perbaruiItem(li);
+          event.stopPropagation(); // Stop bubbling
+          let stokSaatIni = Number(li.dataset.stok);
+          if (stokSaatIni > 0) {
+            li.dataset.stok = stokSaatIni - 1;
+            perbaruiItem(li);
+          }
           return;
         }
+
+        // Aksi 2: Tombol Hapus
         if (event.target.matches(".hapus")) {
-          li.remove(); // [4] hapus kartu dari halaman
+          event.stopPropagation();
+          li.remove(); // Hapus dari DOM
           perbaruiStatus();
           return;
         }
-        li.classList.toggle("dipilih"); // [3] klik bagian lain kartu: pilih / batal pilih
+
+        // Aksi 3: Klik kartu untuk Toggle Select
+        li.classList.toggle("dipilih");
       });
 
-      // Data awal (reverse() supaya urutan tampil sama, karena prepend menaruh di atas)
+      // Data Awal
       [
         ["Laskar Pelangi", 3],
         ["Bumi Manusia", 0],
@@ -259,8 +285,8 @@
       ]
         .reverse()
         .forEach(([judul, stok]) => daftar.prepend(buatItem(judul, stok)));
+
       perbaruiStatus();
-      console.log("[2] innerText status:", elStatus.innerText);
     </script>
   </body>
 </html>
